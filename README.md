@@ -5,7 +5,7 @@ A practical pipeline demonstrating:
 - **HOG feature extraction** (using `scikit-image`)
 - **Multiple ML models** (e.g Decision Tree, etc.)
 - **GPU acceleration** (XGBoost with CUDA)  
-- **Edge device inference** on resource-constrained hardware (e.g., Raspberry Pi, Jetson Nano)
+- **Edge device inference** on resource-constrained hardware (e.g., Kria KV260, Nvidia Jetson Orin NX)
 
 ## Table of Contents
 1. [Overview](#overview)  
@@ -35,7 +35,7 @@ Key highlights:
 - Demonstrates how to **download and parse the COCO dataset** for a custom classification task.  
 - Walks through **HOG feature extraction** on each image.  
 - Uses **XGBoost with GPU support** (optional) for faster training, or a simpler **Decision Tree** classifier if GPU is unavailable.  
-- Explains **exporting the trained model** and **loading** it on devices like Raspberry Pi or Jetson Nano.  
+- Explains **exporting the trained model** and **loading** it on devices like the Kria KV260 and Nvidia Jetson Orin NX.  
 
 ---
 
@@ -200,7 +200,7 @@ python src/inference_edge.py my_xgb_model.json
 - Runs `model.predict()` to classify the image (pizza, hot dog, donut, or cake).
 - Prints or overlays the label on the video feed.
 
-On a **Raspberry Pi** or **Jetson Nano**, you’d need:
+On a **Kria KV260** or **Nvidia Jetson Orin NX**, you’d need:
 
 ```bash
 pip install xgboost scikit-image opencv-python
@@ -216,8 +216,10 @@ pip install xgboost scikit-image opencv-python
 
 - **Accuracy** on COCO val set: ~85–95% (depending on classes, sample size, HOG parameters, and your model’s hyperparameters).
 - **Inference speed**:  
-  - On a **desktop GPU**, tens of frames per second.  
-  - On a **Raspberry Pi**, 1–2 FPS might be more realistic if using HOG + XGBoost on CPU.  
+  - On a **Desktop GPU**, tens of frames per second.  
+  - On a **Nvidia Jetson Orin NX**, 1–2 FPS might be more realistic if using HOG + XGBoost on CPU.
+  - On a **Kria KV260**, 1–2 FPS might be more realistic if using HOG + XGBoost on CPU.  
+
 - **100% accuracy** might indicate data leakage (e.g., very small test set or mis-labeled data). Always verify your approach is correct.
 
 ---
@@ -265,7 +267,6 @@ This project is licensed under the [MIT License](LICENSE). You’re free to use,
 2. **XGBoost** – [Official GitHub](https://github.com/dmlc/xgboost), [Documentation](https://xgboost.readthedocs.io/)  
 3. **scikit-image** – [Docs](https://scikit-image.org/docs/stable/)  
 4. **pycocotools** – [GitHub](https://github.com/cocodataset/cocoapi)  
-5. **Raspberry Pi** – [Downloads](https://www.raspberrypi.org/software/)  
 6. **NVIDIA Jetson** – [Developer Site](https://developer.nvidia.com/embedded-computing)
 
 ---

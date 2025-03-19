@@ -85,24 +85,7 @@ git clone https://github.com/MultiModel-Edge-AI/EdgeAI-COCO-pipeline.git
 cd EdgeAI-COCO-pipeline
 ```
 
-### 2. Create/Activate a Virtual Environment (Recommended)
-
-- **conda** example:
-
-```bash
-conda create -n coco-edgevision python=3.9
-conda activate coco-edgevision
-```
-
-- **pip/venv** example:
-
-```bash
-python -m venv venv
-source venv/bin/activate  # on Linux/Mac
-venv\Scripts\activate     # on Windows
-```
-
-### 3. Install Dependencies
+### 2. Install Dependencies
 
 - Using `dependencies.txt`:
 ```bash

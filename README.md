@@ -126,9 +126,8 @@ pip install -r dependencies.txt
    ├── train2017/
    ├── val2017/
    ├── test2017/
-   └── annotations/
-       ├── instances_train2017.json
-       ├── instances_val2017.json
+   ├── instances_train2017.json
+   ├── instances_val2017.json
        ...
    ```
 

@@ -65,9 +65,8 @@ A typical directory layout might look like this:
 │   ├── train_xgboost.py       # Main training script for XGBoost
 │   ├── train_decision_tree.py # Example script for Decision Tree
 │   ├── inference_edge.py      # Script to run inference (live camera or images)
-│   └── utils/
-│       ├── hog_extraction.py  # HOG feature extraction functions
-│       └── coco_helpers.py    # COCO annotation parsing helpers
+│   ├── hog_extraction.py  # HOG feature extraction functions
+│   └── coco_helpers.py    # COCO annotation parsing helpers
 ├── README.md
 └── requirements.txt
 ```
@@ -126,8 +125,9 @@ pip install -r dependencies.txt
    ├── train2017/
    ├── val2017/
    ├── test2017/
-   ├── instances_train2017.json
-   ├── instances_val2017.json
+   ├── annotations/
+      ├── instances_train2017.json
+      ├── instances_val2017.json
        ...
    ```
 

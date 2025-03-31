@@ -1,62 +1,54 @@
+# inference_edge.py
+
 import sys
-import numpy as np
 import cv2
-import xgboost as xgb
-# from sklearn.tree import DecisionTreeClassifier  # if you want to load a scikit-learn model
-# import joblib
+import joblib
+import numpy as np
 
-from hog_extraction import extract_hog_feature
-
-# If you used a label encoder, you need the same class order:
-TARGET_CLASSES = ['pizza', 'hot dog', 'donut', 'cake']
+from detect import sliding_window_detect, non_max_suppression
 
 def main():
-    # Parse arguments
     if len(sys.argv) < 2:
-        print("Usage: python inference_edge.py <model_file.json>")
-        print("Example: python inference_edge.py my_xgb_model.json")
+        print("Usage: python inference_edge.py xgb_detector.pkl")
         sys.exit(1)
-    
+
     model_path = sys.argv[1]
+    print("[INFO] Loading model:", model_path)
+    model = joblib.load(model_path)
+    print("[INFO] Model loaded. Starting camera...")
 
-    # Load model
-    model = xgb.XGBClassifier()
-    model.load_model(model_path)
-    print(f"[INFO] Loaded XGBoost model from {model_path}")
-
-    # If using a scikit-learn Decision Tree:
-    # dt_model = joblib.load('my_decision_tree.pkl')
-
-    # Initialize camera
-    cap = cv2.VideoCapture(0)  # 0 for default webcam
+    cap = cv2.VideoCapture(0)  # default camera
     if not cap.isOpened():
-        print("[ERROR] Could not open camera.")
+        print("[ERROR] Cannot open camera.")
         sys.exit(1)
 
     print("[INFO] Press 'q' to quit.")
     while True:
         ret, frame = cap.read()
         if not ret:
-            print("[ERROR] Camera frame capture failed.")
+            print("[ERROR] Camera error.")
             break
 
-        # Extract HOG features for the frame
-        hog_vec = extract_hog_feature(frame, output_size=(128,128))
+        # run naive detection
+        detections = sliding_window_detect(
+            img=frame,
+            model=model,
+            win_size=(64,64),
+            step=24,               # bigger step = faster, fewer boxes
+            scale_factors=[1.0,1.3],
+            score_thresh=0.6
+        )
 
-        # Predict
-        X_input = np.array([hog_vec], dtype=np.float32)
-        y_pred = model.predict(X_input)  # numeric label
-        pred_idx = int(y_pred[0])
-        if 0 <= pred_idx < len(TARGET_CLASSES):
-            pred_label = TARGET_CLASSES[pred_idx]
-        else:
-            pred_label = "Unknown"
+        # NMS
+        final_boxes = non_max_suppression(detections, iou_thresh=0.3)
 
-        # Display result
-        cv2.putText(frame, pred_label, (10,30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
-        cv2.imshow("Edge AI Inference", frame)
+        # draw bboxes
+        for (xmin,ymin,xmax,ymax,score) in final_boxes:
+            cv2.rectangle(frame, (xmin,ymin), (xmax,ymax), (0,255,0), 2)
+            cv2.putText(frame, f"{score:.2f}", (xmin,ymin-5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,0), 2)
 
+        cv2.imshow("Detection", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 

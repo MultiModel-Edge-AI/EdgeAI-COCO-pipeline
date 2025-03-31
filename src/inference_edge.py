@@ -1,67 +1,94 @@
+"""
+infer_edge.py
+
+Loads the trained Faster R-CNN model, runs real-time bounding-box detection
+on a webcam feed. GPU-accelerated if available.
+"""
+
 import sys
-import numpy as np
 import cv2
-import xgboost as xgb
-# from sklearn.tree import DecisionTreeClassifier  # if you want to load a scikit-learn model
-# import joblib
+import torch
+import torchvision
+import numpy as np
 
-from hog_extraction import extract_hog_feature
-
-# If you used a label encoder, you need the same class order:
-TARGET_CLASSES = ['pizza', 'hot dog', 'donut', 'cake']
+#class list from training
+CLASS_NAMES = [
+    "background", "aeroplane", "bicycle", "bird", "boat", "bottle",
+    "bus", "car", "cat", "chair", "cow", "diningtable", "dog",
+    "horse", "motorbike", "person", "pottedplant", "sheep",
+    "sofa", "train", "tvmonitor"
+]
 
 def main():
-    # Parse arguments
     if len(sys.argv) < 2:
-        print("Usage: python inference_edge.py <model_file.json>")
-        print("Example: python inference_edge.py my_xgb_model.json")
+        print("Usage: python infer_edge.py fasterrcnn_voc.pth")
         sys.exit(1)
-    
+
     model_path = sys.argv[1]
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Load model
-    model = xgb.XGBClassifier()
-    model.load_model(model_path)
-    print(f"[INFO] Loaded XGBoost model from {model_path}")
+    #building model architecture model architecture as training
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
+        weights="DEFAULT"
+    )
+    num_classes = 21
+    in_features = model.roi_heads.box_predictor.cls_score.in_features
+    model.roi_heads.box_predictor = \
+        torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, num_classes)
 
-    # If using a scikit-learn Decision Tree:
-    # dt_model = joblib.load('my_decision_tree.pkl')
+    #load weights
+    state_dict = torch.load(model_path, map_location=device)
+    model.load_state_dict(state_dict)
+    model.to(device)
+    model.eval()
+    print(f"[INFO] Loaded model from {model_path}")
 
-    # Initialize camera
-    cap = cv2.VideoCapture(0)  # 0 for default webcam
+    #open camera
+    cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        print("[ERROR] Could not open camera.")
+        print("[ERROR] Cannot open webcam.")
         sys.exit(1)
 
     print("[INFO] Press 'q' to quit.")
     while True:
         ret, frame = cap.read()
         if not ret:
-            print("[ERROR] Camera frame capture failed.")
+            print("[ERROR] Camera read error.")
             break
 
-        # Extract HOG features for the frame
-        hog_vec = extract_hog_feature(frame, output_size=(128,128))
+        #convert BGR (OpenCV) to RGB (PyTorch)
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        #convert to tensor
+        img_tensor = torch.from_numpy(rgb_frame).permute(2,0,1).float().to(device)
+        img_tensor /= 255.0  # normalize 0..1
 
-        # Predict
-        X_input = np.array([hog_vec], dtype=np.float32)
-        y_pred = model.predict(X_input)  # numeric label
-        pred_idx = int(y_pred[0])
-        if 0 <= pred_idx < len(TARGET_CLASSES):
-            pred_label = TARGET_CLASSES[pred_idx]
-        else:
-            pred_label = "Unknown"
+        #run inference
+        with torch.no_grad():
+            outputs = model([img_tensor])  # list of dict
+        # each element in `outputs` has 'boxes', 'labels', 'scores'
+        out = outputs[0]
 
-        # Display result
-        cv2.putText(frame, pred_label, (10,30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
-        cv2.imshow("Edge AI Inference", frame)
+        boxes = out["boxes"].cpu().numpy()
+        labels = out["labels"].cpu().numpy()
+        scores = out["scores"].cpu().numpy()
 
+        #visualizaton
+        for box, label, score in zip(boxes, labels, scores):
+            if score < 0.5:
+                continue
+            x1, y1, x2, y2 = box.astype(int)
+            cls_name = CLASS_NAMES[label] if label < len(CLASS_NAMES) else "Unknown"
+            cv2.rectangle(frame, (x1,y1), (x2,y2), (0,255,0), 2)
+            cv2.putText(frame, f"{cls_name} {score:.2f}", (x1,y1-5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
+
+        cv2.imshow("Faster R-CNN Detection", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     cap.release()
     cv2.destroyAllWindows()
+    print("[INFO] Inference ended.")
 
 if __name__ == "__main__":
     main()

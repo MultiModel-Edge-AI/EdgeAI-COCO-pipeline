@@ -1,18 +1,17 @@
-# COCO-EdgeVision: HOG-Based Image Classification & Edge Deployment
+# CNN-based Object Detection & Edge Deployment
 
 A practical pipeline demonstrating:
-- **COCO dataset** usage for classification
-- **HOG feature extraction** (using `scikit-image`)
-- **Multiple ML models** (e.g Decision Tree, etc.)
-- **GPU acceleration** (XGBoost with CUDA)  
-- **Edge device inference** on resource-constrained hardware (e.g., Kria KV260, Nvidia Jetson Orin NX)
+- **Pascal VOC** usage for object detection
+- **Modern CNN-based models** (e.g., Faster R-CNN, YOLO)
+- **GPU acceleration** (PyTorch, Torchvision, etc.)
+- **Edge device inference** on resource-constrained hardware (Kria KV260, Jetson Orin NX, Raspberry Pi 5)
 
 ## Table of Contents
 1. [Overview](#overview)  
 2. [Features](#features)  
 3. [Project Structure](#project-structure)  
 4. [Installation](#installation)  
-5. [Downloading the COCO Dataset](#downloading-the-coco-dataset)  
+5. [Downloading the Pascal VOC Dataset](#downloading-the-pascal-voc-dataset)  
 6. [Usage](#usage)  
    1. [Data Preparation](#data-preparation)  
    2. [Model Training](#model-training)  
@@ -28,50 +27,48 @@ A practical pipeline demonstrating:
 
 ## Overview
 
-This repository contains code to **classify food-related images** by leveraging the **COCO 2017 dataset** and extracting **HOG (Histogram of Oriented Gradients) features**. The classification models (such as a **Decision Tree** or **XGBoost**) can then be **deployed on edge devices** for real-time inference, even on low-power hardware.
+This repository, **EdgeAI-Vision-pipeline**, showcases **object detection** on the **Pascal VOC** dataset using **CNN-based** models such as **Faster R-CNN** (with a ResNet-50 backbone) or **YOLO**. We demonstrate **GPU-accelerated training** and **edge inference** on devices like the **NVIDIA Jetson Orin NX**, **Xilinx Kria KV260**, or **Raspberry Pi 5**. By integrating the **dataset parsing** directly in the training script, we eliminate the need for a separate `voc_utils.py` file, simplifying the workflow.
 
 Key highlights:
 
-- Demonstrates how to **download and parse the COCO dataset** for a custom classification task.  
-- Walks through **HOG feature extraction** on each image.  
-- Uses **XGBoost with GPU support** (optional) for faster training, or a simpler **Decision Tree** classifier if GPU is unavailable.  
-- Explains **exporting the trained model** and **loading** it on devices like the Kria KV260 and Nvidia Jetson Orin NX.  
+- Demonstrates how to **download and parse the Pascal VOC dataset** for object detection.  
+- Walks through **end-to-end training** of CNN-based detectors on VOC.  
+- Explains **exporting** the trained model to standard formats (e.g., `.pth` or ONNX) for edge deployment.  
+- Illustrates real-time **inference** on resource-constrained hardware with a camera feed.
 
 ---
 
 ## Features
 
-- **COCO-based classification**: Select categories (like _pizza_, _hot dog_, _donut_, _cake_) for single-label classification.  
-- **HOG feature extraction**: CPU-based approach using `scikit-image`.  
-- **Multiple ML options**: XGBoost (GPU-accelerated) or other tree-based models (e.g., Decision Tree).  
-- **Edge inference**: Minimal script to run **live camera classification** on devices with limited resources.  
-- **Easy extension**: Adapt the pipeline to different categories, additional classes, or more advanced feature extraction methods.  
+- **Pascal VOC** – 20 object classes (person, dog, car, etc.).  
+- **Modern CNNs** – E.g., **Faster R-CNN** with **ResNet-50** backbone, YOLO, or others.  
+- **GPU Training** – Leverage PyTorch + CUDA for faster training.  
+- **Edge Inference** – Minimal script to run bounding-box detection on low-power devices.  
+- **Easily Adaptable** – Swap in your favorite detection model or hardware target.
 
 ---
 
 ## Project Structure
 
-A typical directory layout might look like this:
+A typical layout might look like this:
 
 ```
 .
-├── coco2017/
-│   ├── train2017/
-│   ├── val2017/
-│   └── annotations/
-│       ├── instances_train2017.json
-│       └── instances_val2017.json
+├── VOCdevkit/
+│   └── VOC2007/
+│       ├── Annotations/
+│       ├── JPEGImages/
+│       ├── ImageSets/
+│       └── ...
 ├── src/
-│   ├── train_xgboost.py       # Main training script for XGBoost
-│   ├── train_decision_tree.py # Example script for Decision Tree
-│   ├── inference_edge.py      # Script to run inference (live camera or images)
-│   ├── hog_extraction.py  # HOG feature extraction functions
-│   └── coco_helpers.py    # COCO annotation parsing helpers
+│   ├── train_detector.py   # Main training script for a CNN-based model
+│   ├── infer_edge.py       # Script to run real-time inference (live camera)
+│   └── models/             # (Optional) custom model code or configs
 ├── README.md
 └── requirements.txt
 ```
 
-Feel free to reorganize to match your preferences.
+Feel free to reorganize as needed.
 
 ---
 
@@ -80,56 +77,33 @@ Feel free to reorganize to match your preferences.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/MultiModel-Edge-AI/EdgeAI-COCO-pipeline.git
-cd EdgeAI-COCO-pipeline
+git clone https://github.com/MultiModel-Edge-AI/EdgeAI-Vision-pipeline.git
+cd EdgeAI-Vision-pipeline
 ```
 
 ### 2. Install Dependencies
 
-- Using `dependencies.txt`:
 ```bash
 pip install -r dependencies.txt
 ```
 
+*(If you’re using Conda, you can instead create a conda environment and install PyTorch + Torchvision per your GPU drivers.)*
+
 ---
 
-## Downloading the COCO Dataset
+## Downloading the Pascal VOC Dataset
 
-1. **Create a directory** for COCO (e.g., `coco2017`) if you haven’t already.
-
-2. **Download** train/val images and annotations from <https://cocodataset.org/#download>:
-
-   ```bash
-   mkdir coco2017
-   cd coco2017
-   wget http://images.cocodataset.org/zips/train2017.zip
-   wget http://images.cocodataset.org/zips/val2017.zip
-   wget http://images.cocodataset.org/zips/test2017.zip
-   wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+1. **Download** the [VOC2007](http://host.robots.ox.ac.uk/pascal/VOC/voc2007/) (or VOC2012) train/val data, such as `VOCtrainval_06-Nov-2007.tar`.  
+2. **Extract** it, resulting in a structure like:
    ```
-
-3. **Unzip** the files:
-
-   ```bash
-   unzip train2017.zip
-   unzip val2017.zip
-   unzip test2017.zip
-   unzip annotations_trainval2017.zip
-   ```
-
-   Your folder should contain `train2017/`, `val2017/`, `test2017/`, and `annotations/`.
-
-4. **Check** that you have:
-   ```
-   coco2017/
-   ├── train2017/
-   ├── val2017/
-   ├── test2017/
-   ├── annotations/
-      ├── instances_train2017.json
-      ├── instances_val2017.json
+   VOCdevkit/
+     VOC2007/
+       Annotations/
+       JPEGImages/
+       ImageSets/
        ...
    ```
+3. **Check** your `train_detector.py` for a path variable (e.g., `VOC_ROOT = "VOCdevkit/VOC2007"`) and update it to match your local directory.
 
 ---
 
@@ -137,102 +111,69 @@ pip install -r dependencies.txt
 
 ### Data Preparation
 
-This project **filters** COCO images containing specific food classes (e.g., pizza, hot dog, donut, cake) and discards images with multiple categories. You can modify the code to handle multi-label or additional classes.
-
-1. **Edit the list of target classes** in your training script (e.g., `TARGET_CLASSES = ['pizza','hot dog','donut','cake']`).
-2. **Set** any optional parameters (like `MAX_IMAGES_PER_CLASS`) if you want to limit dataset size for a quick test.
+For **Faster R-CNN** with PyTorch, you can directly use `torchvision.datasets.VOCDetection` or define a small wrapper inside `train_detector.py` to parse bounding-box data. No separate `voc_utils.py` is required; simply ensure your code references the correct `Annotations/` and `JPEGImages/` paths.
 
 ### Model Training
 
-In `src/train_xgboost.py` (for example):
+An example command:
 
 ```bash
-python src/train_xgboost.py
+python src/train_detector.py
 ```
 
-What it does:
-- Reads the COCO annotations (`instances_train2017.json`, `instances_val2017.json`) via `pycocotools`.
-- Filters out images that don’t match your target classes or that contain multiple classes.
-- Extracts **HOG features** for each selected image.
-- Trains an **XGBoost** classifier (optionally on GPU if available).
-- Outputs performance metrics (confusion matrix, accuracy).
-- Saves the trained model as `my_xgb_model.json`.
-
-*(For a **Decision Tree** or other algorithms, see `src/train_decision_tree.py` or a similar script.)*
+- Loads Pascal VOC from `VOCdevkit/VOC2007`.  
+- Builds a **ResNet-based Faster R-CNN** (or YOLO, depending on your script).  
+- **Trains** on GPU if available, logs losses, etc.  
+- Saves the final model to something like `fasterrcnn_voc.pth`.
 
 ### Evaluation
 
-The script typically:
-- Uses **COCO’s `val2017`** subset to evaluate.  
-- Prints a **confusion matrix** and class-specific error rates.  
-- Reports the **overall accuracy**.
+Depending on your script, you may:
 
-Example output snippet:
-```
-Confusion Matrix (Validation Set):
-[[123   1   0   2]
- [  3 134   5   0]
- [  0   2 145   1]
- [  4   0   3 118]]
-
-Error Rates by Class:
- pizza: 0.024
- hot dog: 0.056
- donut: 0.020
- cake: 0.055
-
-Overall Val Accuracy: 0.922
-```
-
-*(The actual numbers depend on your dataset filters and hyperparameters.)*
+- Check bounding-box metrics like **mAP** (mean average precision) on a validation split.  
+- Inspect detection outputs on a handful of images.  
 
 ### Inference on Edge Devices
 
-After training, we have a **serialized model** (e.g., `my_xgb_model.json`). Copy it to your edge device, then run an **inference script**. For example, `inference_edge.py`:
+After training:
+
+1. **Copy** your saved model file (e.g. `fasterrcnn_voc.pth`) to the edge device.
+2. **Install** the appropriate environment (PyTorch or ONNX runtime, plus OpenCV).
+3. **Run**:
 
 ```bash
-python src/inference_edge.py my_xgb_model.json
+python src/infer_edge.py fasterrcnn_voc.pth
 ```
 
-- Captures frames from a camera (using OpenCV).
-- Extracts HOG features on each frame.
-- Runs `model.predict()` to classify the image (pizza, hot dog, donut, or cake).
-- Prints or overlays the label on the video feed.
+The script should:
 
-On a **Kria KV260** or **Nvidia Jetson Orin NX**, you’d need:
-
-```bash
-pip install xgboost scikit-image opencv-python
-```
-
-> **Note**: If your edge device has limited CPU/GPU resources, consider smaller models, fewer classes, or **faster** feature extraction approaches.
+- Open a camera feed,  
+- Convert frames to PyTorch tensors,  
+- Run the CNN to predict bounding boxes + labels,  
+- Draw them on the live video feed.
 
 ---
 
 ## Results
 
-**Potential results** from a typical run might be:
-
-- **Accuracy** on COCO val set: ~85–95% (depending on classes, sample size, HOG parameters, and your model’s hyperparameters).
-- **Inference speed**:  
-  - On a **Desktop GPU**, tens of frames per second.  
-  - On a **Nvidia Jetson Orin NX**, 1–2 FPS might be more realistic if using HOG + XGBoost on CPU.
-  - On a **Kria KV260**, 1–2 FPS might be more realistic if using HOG + XGBoost on CPU.  
-
-- **100% accuracy** might indicate data leakage (e.g., very small test set or mis-labeled data). Always verify your approach is correct.
+- **mAP**: Ranges from 50–80% depending on the model (e.g., Faster R-CNN, YOLOv5, etc.).  
+- **Real-Time Inference**: 
+  - Desktop GPU can easily reach 20–30+ FPS.  
+  - On **Jetson Orin NX** or **Kria KV260**, you may get a few FPS out-of-the-box. Hardware-accelerated frameworks (e.g., TensorRT, Vitis AI) can improve this.  
+- **Optimizations**: If speed is insufficient, consider smaller backbones (MobileNet), pruning/quantization, or specialized hardware acceleration.
 
 ---
 
 ## Troubleshooting
 
-1. **Skipping Images**:  
-   - If you see “Could not find class for image …” or skipping many images, ensure your script is filtering classes properly.  
-2. **XGBoost Device Mismatch**:  
-   - If you see warnings about “mismatched devices,” your data might be on CPU while the model is on GPU. Usually harmless but can slow inference.  
-3. **No GPU**:  
-   - If your edge device doesn’t support CUDA, remove `device='cuda'` from the XGBoost parameters (or use a CPU-based classifier).  
-4. **Performance**:  
-   - Large-scale HOG extraction can be slow. Consider limiting data or optimizing with GPU-based libraries (like CuPy) for preprocessing.
+1. **Dataset Paths**  
+   - Make sure your script points to the correct `VOCdevkit/VOC2007`.  
+2. **CUDA Device**  
+   - If you don’t have an NVIDIA GPU or correct drivers, training will fall back to CPU.  
+3. **Low mAP**  
+   - Ensure you aren’t mixing train/test sets. Check data augmentation or hyperparameters.  
+4. **Inference Speed**  
+   - Smaller models or hardware-accelerated deployments can help.
 
 ---
 
@@ -248,9 +189,9 @@ pip install xgboost scikit-image opencv-python
    git commit -m "Add my new feature"
    git push origin feature-my-improvement
    ```
-4. **Open a Pull Request** to merge into the main branch.
+4. **Open a Pull Request** into the main branch.
 
-We welcome suggestions, bug reports, and community contributions!
+We welcome community contributions, bug reports, and suggestions!
 
 ---
 
@@ -262,12 +203,12 @@ This project is licensed under the [MIT License](LICENSE). You’re free to use,
 
 ## References
 
-1. **COCO Dataset** – [Official Website](https://cocodataset.org/)  
-2. **XGBoost** – [Official GitHub](https://github.com/dmlc/xgboost), [Documentation](https://xgboost.readthedocs.io/)  
-3. **scikit-image** – [Docs](https://scikit-image.org/docs/stable/)  
-4. **pycocotools** – [GitHub](https://github.com/cocodataset/cocoapi)  
-6. **NVIDIA Jetson** – [Developer Site](https://developer.nvidia.com/embedded-computing)
+1. **Pascal VOC** – [Official Site](http://host.robots.ox.ac.uk/pascal/VOC/)  
+2. **PyTorch Torchvision** – [Docs](https://pytorch.org/vision/stable/index.html)  
+3. **NVIDIA Jetson** – [Developer Site](https://developer.nvidia.com/embedded-computing)  
+4. **Kria KV260** – [Xilinx Documentation](https://www.xilinx.com/products/som/kria/kv260-vision-starter-kit.html)  
+5. **Raspberry Pi** – [Official Site](https://www.raspberrypi.com/)  
 
 ---
 
-_Thank you for checking out **COCO-EdgeVision**! If you have any questions, suggestions, or issues, feel free to [open an issue](../../issues) or reach out._
+_Thank you for visiting **EdgeAI-Vision-pipeline**! If you have any questions, suggestions, or issues, feel free to [open an issue](../../issues) or reach out._
